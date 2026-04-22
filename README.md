@@ -6,33 +6,43 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 
 ### Photoshop UXP (`uxp-photoshop.md`)
 
-- Manifest v5 configuration and permissions
-- Imaging API: `getPixels`, `putPixels`, `createImageDataFromBuffer`, `encodeImageData`
+- Document class (28 properties, 28 methods) and Layer class (27 properties, 46 methods including 30+ filters)
+- Selection class, LayerComp, ColorSampler, PathItem, Guide, HistoryState
+- Manifest v5 configuration, permissions, and feature flags (`CSSNextSupport`, `enableSWCSupport`)
+- Imaging API: `getPixels`, `putPixels`, `createImageDataFromBuffer`, `encodeImageData`, masks, selection
+- batchPlay reference forms (ID, Index, Name, Enum, Property), multiGet, Action Recording (v25.0+)
 - Canvas API limitations (no `drawImage`, `getImageData`, `putImageData`, `toDataURL`)
-- Full Spectrum UXP component catalog (`sp-button`, `sp-slider`, `sp-dropdown`, etc.)
-- HTML/CSS support matrix and what's missing (no Grid, no transforms, no animations)
-- Event system: action notifications, core events (`userIdle`), DOM events
-- `executeAsModal` patterns
-- Hybrid plugin C++ bridge
-- Panel lifecycle, sizing, and theme awareness
-- 35-item known-issues list
+- Full Spectrum UXP component catalog (19 `sp-*` widgets, 40 icons) + SWC overview
+- HTML/CSS support matrix with CSSNextSupport feature flag details
+- Text APIs: TextItem, CharacterStyle (34 properties), ParagraphStyle, WarpStyle
+- Color management: SolidColor, color classes, `convertColor`, `getColorProfiles`
+- Event system, `executeAsModal` (with `timeOut`, `registerAutoCloseDocument`)
+- App/Core module APIs, Preferences (13 groups), prototype extensions
+- Hybrid plugin C++ bridge, WebView (panels since v6.4), network APIs
+- 35+ known issues catalog
 
 ### Lightroom Classic SDK (`lrc-sdk.md`)
 
-- Plugin architecture: `Info.lua` manifest, entry points, plugin types
-- Pixel access workarounds (there is no direct pixel access from Lua)
-- `LrView` UI widgets and data binding
-- `LrDevelopController` observation and slider control
-- Full module catalog (`LrTasks`, `LrDialogs`, `LrFileUtils`, etc.)
-- Memory leak prevention rules for long-running floating dialogs
-- External binary bridge patterns (Lua to Rust/C++ CLI)
-- Debounce and busy-guard patterns for async coroutines
+- Complete `Info.lua` manifest reference (23 fields), plugin lifecycle, Lua 5.1.5 sandbox details
+- 5-stage export pipeline, export/publish service provider callbacks, export filter provider
+- Memory leak prevention rules (6 non-negotiable rules with code) for long-running floating dialogs
+- `LrCatalog` write gates, batch operations, `findPhotos` with search descriptors
+- `LrPhoto` methods, 40+ `getRawMetadata` keys, 70+ `getFormattedMetadata` keys, custom metadata
+- `LrView` 25 factory methods, 6 property categories, data binding patterns (basic, transform, multi-key, cross-table)
+- `LrDialogs` 14 functions, `LrDevelopController` 94 functions grouped by category
+- 117 develop parameters by panel, local adjustment parameters (process versions 2-6)
+- Controller SDK architecture (LrSocket, external driver, TCP protocol)
+- ~40 module quick reference (LrApplication, LrSelection, LrHttp, LrDigest, etc.)
+- External binary bridge patterns with platform detection (Lua to Rust/C++ CLI)
 
 ### Quick Reference (`SKILL.md`)
 
-- Side-by-side capability matrix (PS UXP vs LrC)
-- Critical pitfalls with code examples
-- Common mistake/fix table
+- Side-by-side capability matrix (PS UXP vs LrC) with DOM model, AI features, Selection API
+- Critical pitfalls with code examples (CSSNextSupport flag, executeAsModal anti-patterns, memory leaks)
+- 117 develop parameters by panel, local adjustment parameters by process version
+- Complete `Info.lua` manifest field reference (23 fields)
+- Data binding patterns for LrView
+- Common mistake/fix table (16 entries)
 - Ready-to-use code snippets for the most frequent operations
 
 ## Installation
@@ -55,9 +65,9 @@ Copy or symlink the skill directory into your agent's skill discovery path. The 
 
 ## SDK Versions
 
-- **UXP**: v8.1.0, Manifest v5
-- **Photoshop**: v23.3.0+
-- **Lightroom Classic SDK**: v15.2
+- **UXP**: v9.2.0, Manifest v5
+- **Photoshop**: v27.4
+- **Lightroom Classic SDK**: v15.2+
 
 Content was compiled from Adobe's official documentation repositories ([AdobeDocs/uxp-photoshop](https://github.com/AdobeDocs/uxp-photoshop), [AdobeDocs/uxp](https://github.com/AdobeDocs/uxp)) and the LrC 15.2 SDK, supplemented with lessons learned from building [Chromascope](https://github.com/kevinkiklee/chromascope), a chrominance vectorscope plugin for both hosts.
 
