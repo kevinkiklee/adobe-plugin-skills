@@ -4,9 +4,9 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 
 ## What's Covered
 
-### Photoshop UXP (`uxp-photoshop.md`)
+### Photoshop UXP (`ps-uxp-sdk.md`)
 
-- Document class (28 properties, 28 methods) and Layer class (27 properties, 46 methods including 30+ filters)
+- Document class (30 properties, 29 methods) and Layer class (28 properties, 55 methods — 38 filters + 17 other)
 - Selection class, LayerComp, ColorSampler, PathItem, Guide, HistoryState
 - Manifest v5 configuration, permissions, and feature flags (`CSSNextSupport`, `enableSWCSupport`)
 - Imaging API: `getPixels`, `putPixels`, `createImageDataFromBuffer`, `encodeImageData`, masks, selection
@@ -17,7 +17,7 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 - Text APIs: TextItem, CharacterStyle (34 properties), ParagraphStyle, WarpStyle
 - Color management: SolidColor, color classes, `convertColor`, `getColorProfiles`
 - Event system, `executeAsModal` (with `timeOut`, `registerAutoCloseDocument`)
-- App/Core module APIs, Preferences (13 groups), prototype extensions
+- App/Core module APIs, Preferences (12 groups), prototype extensions
 - Hybrid plugin C++ bridge, WebView (panels since v6.4), network APIs
 - 35+ known issues catalog
 
@@ -29,8 +29,8 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 - `LrCatalog` write gates, batch operations, `findPhotos` with search descriptors
 - `LrPhoto` methods, 40+ `getRawMetadata` keys, 70+ `getFormattedMetadata` keys, custom metadata
 - `LrView` 25 factory methods, 6 property categories, data binding patterns (basic, transform, multi-key, cross-table)
-- `LrDialogs` 14 functions, `LrDevelopController` 94 functions grouped by category
-- 117 develop parameters by panel, local adjustment parameters (process versions 2-6)
+- `LrDialogs` 14 functions, `LrDevelopController` 95 functions grouped by category
+- Complete develop-parameter catalog by panel, local adjustment parameters (process versions 2-6)
 - Controller SDK architecture (LrSocket, external driver, TCP protocol)
 - ~40 module quick reference (LrApplication, LrSelection, LrHttp, LrDigest, etc.)
 - External binary bridge patterns with platform detection (Lua to Rust/C++ CLI)
@@ -39,7 +39,7 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 
 - Side-by-side capability matrix (PS UXP vs LrC) with DOM model, AI features, Selection API
 - Critical pitfalls with code examples (CSSNextSupport flag, executeAsModal anti-patterns, memory leaks)
-- 117 develop parameters by panel, local adjustment parameters by process version
+- Complete develop-parameter catalog by panel, local adjustment parameters by process version
 - Complete `Info.lua` manifest field reference (23 fields)
 - Data binding patterns for LrView
 - Common mistake/fix table (16 entries)
@@ -73,9 +73,9 @@ Copy or symlink the skill directory into your agent's skill discovery path. The 
 
 - **UXP**: v9.2.0, Manifest v5
 - **Photoshop**: v27.4
-- **Lightroom Classic SDK**: v15.2+
+- **Lightroom Classic SDK**: v15.3
 
-Content was compiled from Adobe's official documentation repositories ([AdobeDocs/uxp-photoshop](https://github.com/AdobeDocs/uxp-photoshop), [AdobeDocs/uxp](https://github.com/AdobeDocs/uxp)) and the LrC 15.2 SDK, supplemented with lessons learned from building [Chromascope](https://github.com/kevinkiklee/chromascope), a chrominance vectorscope plugin for both hosts.
+Content was compiled from Adobe's official documentation repositories ([AdobeDocs/uxp-photoshop](https://github.com/AdobeDocs/uxp-photoshop), [AdobeDocs/uxp](https://github.com/AdobeDocs/uxp)) and the LrC 15.3 SDK, supplemented with lessons learned from building [Chromascope](https://github.com/kevinkiklee/chromascope), a chrominance vectorscope plugin for both hosts.
 
 ## Contributing
 

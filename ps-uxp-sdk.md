@@ -1,6 +1,6 @@
 # Photoshop UXP Plugin Reference
 
-Comprehensive reference for UXP (Unified Extensibility Platform) plugins targeting Photoshop. Based on UXP 9.2.0 / Manifest v5 / Photoshop 27.4.
+Comprehensive reference for UXP (Unified Extensibility Platform) plugins targeting Photoshop. Based on UXP 9.2.0 / Manifest v5 / Photoshop 27.4 (February 2026).
 
 UXP is **not** a browser — it has a custom layout engine, limited DOM, and no WebGL/Workers. Don't assume web platform features work.
 
@@ -71,10 +71,10 @@ A single plugin can declare multiple entry points of mixed types.
 | `localFileSystem` | `"request"` \| `"plugin"` \| `"fullAccess"` | File system access |
 | `launchProcess` | `{ schemes, extensions }` | Required for `openExternal`/`openPath` |
 | `ipc` | `{ enablePluginCommunication }` | Inter-plugin messaging |
-| `webview` | `{ allow, domains }` | WebView in panels (v6.4+) and dialogs (v6.0+). Domains optional since v9.0. |
+| `webview` | `{ domains }` | WebView in panels (v6.4+) and dialogs (v6.0+). Domains optional since v9.0. `allow` field removed in UXP 9.2 / PS 27.4. |
 | `enableUserInfo` | boolean | User GUID access (PS 25.1, UXP 7.3+) |
 
-**Feature flags:** `CSSNextSupport` enables box-shadow, transform-origin, scaleX/scaleY, translate. `enableSWCSupport` enables Spectrum Web Components (35 npm packages, locked to v0.37.0 in UXP 8.0). Manifest v5 requires PS 23.3.0+ / UXP 6.0+.
+**Feature flags:** `CSSNextSupport` enables `box-shadow`, `transform-origin`, `scaleX`, `scaleY`, `translate`. Can be `true` or an array (`["boxShadow", "transformFunctions", "transformProperties"]`) for selective enablement. `enableSWCSupport` enables Spectrum Web Components (35 npm packages, locked to v0.37.0 in UXP 8.0) and **implicitly enables `CSSNextSupport`**. Manifest v5 requires PS 23.3.0+ / UXP 6.0+.
 
 ### Panel Lifecycle
 
@@ -144,51 +144,69 @@ Use `@media (prefers-color-scheme: dark/light)` for coarse theme detection. Spec
 | Property | Type | R/W | Min Ver | Notes |
 |---|---|---|---|---|
 | `id` | number | R | 22.5 | Unique document ID |
-| `name` / `title` | string | R | 22.5 | Without/with extension |
-| `path` | string | R | 22.5 | Empty for unsaved |
+| `name` | string | R | 23.0 | With extension |
+| `title` | string | R | 22.5 | Document title |
+| `path` | string | R | 22.5 | Full file path; identifier for cloud docs |
 | `width` / `height` | number | R | 22.5 | Canvas dimensions in pixels |
 | `resolution` | number | R | 22.5 | PPI |
-| `mode` | DocumentMode | R | 22.5 | RGB, CMYK, Grayscale, Lab, etc. |
-| `colorProfileName` | string | R/W | 22.5 | Returns "None" when type not CUSTOM/WORKING |
-| `bitsPerChannel` | BitsPerChannel | R | 22.5 | 8, 16, or 32 |
+| `mode` | DocumentMode | R | 23.0 | RGB, CMYK, Grayscale, Lab, etc. |
+| `colorProfileName` | string | R/W | 23.0 | Returns "None" when type not CUSTOM/WORKING |
+| `colorProfileType` | ColorProfileType | R/W | 23.0 | WORKING / CUSTOM / NONE |
+| `bitsPerChannel` | BitsPerChannelType | R/W | 23.0 | 8, 16, or 32 |
 | `pixelAspectRatio` | number | R/W | 22.5 | Non-square pixel ratio |
-| `activeLayer` / `activeLayers` | Layer / Layer[] | R | 22.5/23.0 | Selected layer(s) |
+| `activeLayers` | Layers | R/W | 22.5 | Selected layers (R/W since 26.9) |
 | `layers` | Layers | R | 22.5 | Top-level layer collection |
-| `backgroundLayer` | Layer? | R | 22.5 | Background layer if present |
-| `activeHistoryBrushSource` | HistoryState | R/W | 24.0 | History brush source |
-| `activeHistoryState` | HistoryState | R | 24.0 | Current history state |
-| `historyStates` | HistoryStates | R | 24.0 | History state collection |
-| `activeChannels` / `channels` | Channel[] / Channels | R/W / R | 23.0 | Channel access |
+| `backgroundLayer` | Layer | R | 22.5 | Background layer if present |
+| `artboards` | Layers | R | 22.5 | Artboards in document |
+| `activeHistoryBrushSource` | HistoryState | R/W | 22.5 | History brush source |
+| `activeHistoryState` | HistoryState | R/W | 22.5 | Current history state |
+| `historyStates` | HistoryStates | R | 22.5 | History state collection |
+| `activeChannels` | Channel[] | R/W | 23.0 | Currently active channels |
+| `channels` | Channels | R | 23.0 | All channels in document |
+| `componentChannels` | Channel[] | R | 24.5 | Component channels |
 | `colorSamplers` | ColorSamplers | R | 24.0 | Color sampler points |
 | `countItems` | CountItems | R | 24.1 | Count items |
 | `guides` | Guides | R | 23.0 | Document guides |
 | `pathItems` | PathItems | R | 23.3 | Vector paths |
 | `layerComps` | LayerComps | R | 24.0 | Saved layer comp states |
-| `selection` | Selection | R | 25.0 | Selection object |
+| `selection` | Selection | R | — | Selection object (no explicit minver; Selection class is 25.0) |
 | `histogram` | number[] | R | 23.0 | 256-entry; only valid for RGB/CMYK/INDEXEDCOLOR |
-| `saved` | boolean | R | 22.5 | True if no unsaved changes |
+| `quickMaskMode` | boolean | R/W | 23.0 | True if app is in Quick Mask mode |
+| `cloudDocument` | boolean | R | 23.0 | True if Photoshop cloud document |
+| `cloudWorkAreaDirectory` | string | R | 23.0 | Local dir for cloud doc |
+| `saved` | boolean | R | 23.0 | True if no unsaved changes |
+| `typename` | string | R | 23.0 | `"Document"` |
+| `zoom` | number | R | 25.1 | Zoom factor in percent |
 
 **Methods:**
 
 | Method | Description | Min Ver |
 |---|---|---|
-| `createLayer(options?)` / `createLayerGroup(options?)` | Create pixel layer or group | 22.5 |
-| `duplicateLayers(layers, doc?)` | Duplicate; cross-document if `doc` given | 22.5 |
+| `createLayer(options?)` / `createLayerGroup(options?)` | Create pixel layer or group | 23.0 |
+| `createPixelLayer(options?)` | Create pixel layer | 24.1 |
+| `createTextLayer(options?)` | Create text layer | 24.2 |
+| `duplicate(name?, mergeOnly?)` | Duplicate document | 23.0 |
+| `duplicateLayers(layers, doc?)` | Duplicate; cross-document if `doc` given | 23.0 |
 | `flatten()` | Merge all into background | 22.5 |
-| `mergeVisibleLayers()` | Merge visible (result is NOT background) | 22.5 |
-| `groupLayers(layers)` / `linkLayers(layers)` / `unlinkLayers(layers)` | Organize layers | 22.5/23.3 |
-| `crop(bounds, angle?, w?, h?)` / `trim(type?, ...)` / `revealAll()` | Canvas manipulation | 22.5 |
-| `resizeCanvas(w, h, anchor?)` / `resizeImage(w, h, res?, method?)` | Resize | 22.5 |
-| `rotateCanvas(angle)` / `flipCanvas(direction)` | Transform canvas | 22.5 |
-| `save()` / `saveAs` / `close(save?)` / `closeWithoutSaving()` | File operations | 22.5 |
-| `convertProfile(profile, intent, ...)` / `changeMode(mode)` | Color management | 22.5 |
-| `suspendHistory(callback, name)` | Batch edits as single undo | 22.5 |
-| `sampleColor(position)` | Sample color at point (returns SolidColor) | 22.5 |
-| `calculations(options)` | Channel calculations | 24.2 |
-| `splitChannels()` / `trapColors(width)` | Channel/print ops | 22.5 |
-| `applyImageAutoColor()` | Auto color correction | 23.5 |
+| `mergeVisibleLayers()` | Merge visible (result is NOT background) | 23.0 |
+| `groupLayers(layers)` / `linkLayers(layers)` | Organize layers | 23.0 |
+| `paste(intoSelection?)` | Paste from clipboard | 23.0 |
+| `rasterizeAllLayers()` | Rasterize all layers | 23.0 |
+| `crop(bounds, angle?, w?, h?)` / `trim(type?, ...)` / `revealAll()` | Canvas manipulation | 23.0 |
+| `resizeCanvas(w, h, anchor?)` / `resizeImage(w, h, res?, method?)` | Resize | 23.0 |
+| `rotate(angle)` | Rotate canvas (previously `rotateCanvas`) | 23.0 |
+| `save()` | Save to current path | 23.0 |
+| `saveAs` | Object with `.psd()`, `.psb()`, `.jpg()`, `.png()`, `.bmp()`, `.gif()` methods | 22.5 |
+| `close(saveDialogOptions?)` / `closeWithoutSaving()` | Close document | 22.5 |
+| `convertProfile(profile, intent, ...)` / `changeMode(mode)` | Color management | 23.0 |
+| `suspendHistory(callback, name)` | Batch edits as single undo | 23.0 |
+| `sampleColor(position)` | Sample color at point (returns SolidColor) | 24.0 |
+| `calculations(options)` | Channel calculations | 24.5 |
+| `splitChannels()` | Split into separate documents per channel | 23.0 |
+| `trap(width)` | Trap colors (was `trapColors` in older refs) | 23.0 |
+| `generativeUpscale(model, options?)` | AI upscaling; `model: GenerativeUpscaleModel.FIREFLY` (requires `executeAsModal`) | 27.2 |
 
-**Gotchas:** `calculations()` requires one unlocked pixel layer. `suspendHistory` scope limited to single document. `mergeVisibleLayers` result is NOT background (unlike `flatten`).
+**Gotchas:** `calculations()` requires one unlocked pixel layer. `suspendHistory` scope limited to single document. `mergeVisibleLayers` result is NOT background (unlike `flatten`). No `rotateCanvas` / `flipCanvas` — use `rotate(angle)` for rotation; horizontal/vertical flip is via batchPlay descriptors.
 
 ### Layer Class
 
@@ -199,39 +217,45 @@ Use `@media (prefers-color-scheme: dark/light)` for coarse theme detection. Spec
 | `id` | number | R | 22.5 | Unique layer ID |
 | `name` | string | R/W | 22.5 | |
 | `kind` | LayerKind | R | 22.5 | pixel, text, group, smartObject, etc. |
-| `opacity` / `fillOpacity` | number | R/W | 22.5 | 0-100 |
+| `opacity` | number | R/W | 22.5 | 0-100 |
+| `fillOpacity` | number | R/W | 23.0 | 0-100 |
 | `blendMode` | BlendMode | R/W | 22.5 | Validation throws errors (v24.2+) |
-| `visible` / `locked` | boolean | R/W | 22.5 | |
-| `allLocked` / `pixelsLocked` / `positionLocked` / `transparentPixelsLocked` | boolean | R/W | 22.5 | Lock variants |
-| `isClippingMask` | boolean | R/W | 22.5 | Releasing affects layers above |
+| `visible` | boolean | R/W | 22.5 | |
+| `locked` | boolean | R | 22.5 | True if any lock property is set (read-only aggregate) |
+| `allLocked` / `pixelsLocked` / `positionLocked` / `transparentPixelsLocked` | boolean | R/W | 22.5 | Individual lock variants |
+| `isClippingMask` | boolean | R/W | 23.0 | Releasing affects layers above |
 | `isBackgroundLayer` | boolean | R | 22.5 | |
 | `bounds` / `boundsNoEffects` | Bounds | R | 22.5 | `{left,top,right,bottom}` / without effects |
-| `parent` | Layer? | R | 22.5 | null for top-level layers |
-| `document` | Document | R | 22.5 | Owning document |
-| `layers` | Layers? | R | 22.5 | Child layers (groups only) |
-| `linkedLayers` | Layer[] | R | 23.3 | |
-| `textItem` | TextItem? | R | 22.5 | Text properties (text layers only) |
-| `smartObject` | SmartObject? | R | 24.1 | |
-| `itemIndex` | number | R | 22.5 | Position in layer stack |
-| `hasVectorMask` / `hasUserMask` / `hasFilterMask` | boolean | R | 24.0 | |
+| `parent` | Layer | R | 22.5 | null for top-level layers |
+| `document` | Document | R | 23.0 | Owning document |
+| `layers` | Layers | R | 23.0 | Child layers (groups only) |
+| `linkedLayers` | Layers | R | 22.5 | |
+| `textItem` | TextItem | R | 24.2 | Text properties (text layers only) |
+| `layerMaskDensity` / `layerMaskFeather` | number | R/W | 23.0 | User mask density (%) / feather (0-1000) |
+| `vectorMaskDensity` / `vectorMaskFeather` | number | R/W | 23.0 | Vector mask density / feather |
+| `filterMaskDensity` / `filterMaskFeather` | number | R/W | 23.0 | Filter mask density / feather |
+| `typename` | string | R | 23.0 | `"Layer"` |
 
 **Non-Filter Methods:**
 
 | Method | Description | Min Ver |
 |---|---|---|
-| `delete()` | Delete layer | 22.5 |
-| `duplicate(relativeObject?, insertionLoc?)` | Duplicate layer | 22.5 |
-| `move(relativeLayer, insertionLoc)` | Move in layer stack | 22.5 |
-| `moveAbove(layer)` / `moveBelow(layer)` | Move relative to target | 22.5 |
-| `link(layer)` / `unlink()` | Link/unlink layers | 23.3 |
-| `translate(horizontal, vertical)` | Move layer content | 22.5 |
-| `scale(width, height, anchor?, interp?)` | Scale layer | 22.5 |
-| `rotate(angle, anchor?, interp?)` | Rotate layer | 22.5 |
-| `flip(axis)` | Flip horizontal/vertical | 22.5 |
-| `merge()` | Merge down | 22.5 |
-| `rasterize(target)` | Rasterize content | 22.5 |
-| `bringToFront()` / `sendToBack()` | Reorder in stack | 22.5 |
-| `convertToSmartObject()` | Convert to smart object | 24.2 |
+| `delete()` | Delete layer | 23.0 |
+| `duplicate(relativeObject?, insertionLoc?, name?)` | Duplicate layer | 23.0 |
+| `move(relativeLayer, insertionLoc)` | Move in layer stack | 23.0 |
+| `link(layer)` | Link with another layer (returns array of linked layers) | 23.0 |
+| `unlink()` | Unlink this layer from its link group | 23.0 |
+| `translate(horizontal, vertical)` | Move layer content | 23.0 |
+| `scale(width, height, anchor?, interp?)` | Scale layer | 23.0 |
+| `rotate(angle, anchor?, interp?)` | Rotate layer | 23.0 |
+| `flip(axis)` | Flip horizontal/vertical | 23.0 |
+| `skew(...)` | Skew transform | 23.0 |
+| `merge()` | Merge down | 23.0 |
+| `rasterize(target)` | Rasterize content | 23.0 |
+| `bringToFront()` / `sendToBack()` | Reorder in stack | 23.0 |
+| `copy(merged?)` / `cut()` / `clear()` | Clipboard / clear ops | 23.0 |
+
+Note: there is no `moveAbove` / `moveBelow` — use `move(relativeLayer, insertionLoc)`. There is no dedicated `convertToSmartObject` method on Layer — use batchPlay (`newPlacedLayer` descriptor).
 
 ### Layer Filter Methods
 
@@ -245,15 +269,14 @@ All require `executeAsModal`. Grouped by category.
 | `applyMotionBlur(angle, distance)` | angle: -360..360, distance: 1-2000 | |
 | `applySmartBlur(radius, threshold, quality, mode)` | radius: 0.1-100 | |
 | `applyLensBlur(options?)` | source, focalDist, shape, radius | |
-| `applyAverageBlur()` / `applyBlur()` / `applyBlurMore()` | None | |
-| `applyRadialBlur(amount, method, quality)` | amount: 1-100, spin/zoom | Not 16/32-bit |
+| `applyAverage()` / `applyBlur()` / `applyBlurMore()` | None | Method is `applyAverage` (not `applyAverageBlur`) |
 
 **Sharpen Filters:**
 
 | Method | Key Parameters | Notes |
 |---|---|---|
 | `applySharpen()` / `applySharpenEdges()` / `applySharpenMore()` | None | |
-| `applyUnSharpMask(amount, radius, threshold)` | amount: 0.1-500, radius: 0.1-250, threshold: 0-255 | |
+| `applyUnSharpMask(amount, radius, threshold)` | amount: 0.1-500, radius: 0.1-1000, threshold: 0-255 | |
 
 **Noise Filters:**
 
@@ -283,7 +306,7 @@ All require `executeAsModal`. Grouped by category.
 
 | Method | Key Parameters | Notes |
 |---|---|---|
-| `applyHighPass(radius)` | 0.1-250 | |
+| `applyHighPass(radius)` | 0.1-1000 | |
 | `applyClouds()` / `applyDifferenceClouds()` | Uses fg/bg colors | |
 | `applyLensFlare(brightness, center, type)` | 10-300 | RGB only |
 | `applyDiffuseGlow(graininess, glow, clear)` | | RGB only |
@@ -303,7 +326,7 @@ All require `executeAsModal`. Grouped by category.
 
 ### Selection Class (v25.0+)
 
-**Properties:** `bounds` (Bounds), `solid` (boolean — true if single rectangle), `document`, `parent`, `typename`
+**Properties:** `bounds` (Bounds), `solid` (boolean — true if single rectangle), `docId` (number — NOT a Document reference), `parent`, `typename`
 
 **Methods:**
 
@@ -311,7 +334,7 @@ All require `executeAsModal`. Grouped by category.
 |---|---|
 | `selectAll()` | Select entire canvas |
 | `deselect()` | Remove selection |
-| `select(region, type?)` | Select polygon region |
+| `selectPolygon(points, mode?, feather?, antiAlias?)` | Polygonal selection |
 | `selectEllipse(bounds, type?, feather?, antiAlias?)` | Elliptical selection |
 | `selectRectangle(bounds, type?, feather?)` | Rectangular selection |
 | `selectColumn(x)` / `selectRow(y)` | Single column/row |
@@ -320,14 +343,15 @@ All require `executeAsModal`. Grouped by category.
 | `feather(by)` | Feather edge |
 | `smooth(radius)` | Smooth selection |
 | `grow(tolerance, antiAlias?)` | Grow by color similarity |
-| `similar(tolerance, antiAlias?)` | Select similar across canvas |
-| `border(width)` | Select border of current |
+| `selectBorder(width)` | Select border of current |
 | `translateBoundary(dX, dY)` | Move selection boundary |
-| `rotateBoundary(angle, anchor?)` | Rotate selection boundary |
-| `selectColorRange(options)` | Select by color range |
-| `saveTo(channel)` / `load(channel, type?)` | Save/load to channel |
+| `rotateBoundary(angle, anchor?, interpolation?)` | Rotate selection boundary |
+| `resizeBoundary(...)` | Resize selection boundary |
+| `makeWorkPath(tolerance?)` | Convert selection to work path |
+| `save(channelName?)` / `saveTo(channel)` | Save selection to alpha channel |
+| `load(from, mode?, invert?)` | Load selection from channel |
 
-Type parameter: `replace` | `diminish` | `extend` | `intersect`
+Mode parameter: `replace` | `add` | `subtract` | `intersect` (varies by method).
 
 ### Other Classes
 
@@ -481,14 +505,14 @@ batchPlay executes Photoshop action descriptors — the same commands used by Ac
 | **Index** | `{ _ref: "layer", _index: 3 }` | Layer at stack position |
 | **Name** | `{ _ref: "layer", _name: "Background" }` | Layer by name |
 | **Enum** | `{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }` | Active/first/last |
-| **Property** | `{ _ref: "property", _property: "opacity" }` | Specific property |
+| **Property** | `{ _property: "opacity" }` | Bare property ref — no `_ref` wrapper |
 
 References chain as arrays (innermost target first):
 ```javascript
 const result = await action.batchPlay([{
   _obj: "get",
   _target: [
-    { _ref: "property", _property: "opacity" },
+    { _property: "opacity" },
     { _ref: "layer", _enum: "ordinal", _value: "targetEnum" },
     { _ref: "document", _enum: "ordinal", _value: "targetEnum" }
   ],
@@ -527,11 +551,11 @@ Enable via `host.data.enableMenuRecording: true` in manifest. Use `action.record
 |---|---|---|
 | `addNotificationListener(events, cb)` | 23.0 | Subscribe to action events |
 | `removeNotificationListener(events, cb)` | 23.0 | Unsubscribe |
-| `batchPlay(descriptors, options)` | 22.5 | Execute descriptors async |
+| `batchPlay(descriptors, options)` | 23.0 | Execute descriptors async |
 | `batchPlaySync(descriptors, options)` | 23.1 | Execute synchronously (blocks UI) |
-| `getIDFromString(string)` | 22.5 | Convert string to runtime ID |
+| `getIDFromString(string)` | 24.0 | Convert string to runtime ID |
 | `recordAction(options, callback)` | 25.0 | Record actions |
-| `validateReference(ref)` | 22.5 | Check reference validity |
+| `validateReference(ref)` | 23.1 | Check reference validity |
 
 ---
 
@@ -549,9 +573,9 @@ async function myDocumentEdit(executionContext, descriptor) {
     documentID: app.activeDocument.id, name: "My Edit"
   });
   // ... do work ...
-  await executionContext.hostControl.resumeHistory(suspensionID, {
-    finalName: "Completed Edit"  // optional: rename history state
-  });
+  // To rename the resulting history state, set `finalName` on the suspensionID object:
+  suspensionID.finalName = "Completed Edit";
+  await executionContext.hostControl.resumeHistory(suspensionID, true /* commit */);
 }
 
 try {
@@ -574,7 +598,7 @@ try {
 | `onCancel` | Register cancellation callback |
 | `reportProgress({ value, commandName })` | Update progress bar (0-1) |
 | `hostControl.suspendHistory(options)` | Batch edits as single undo step |
-| `hostControl.resumeHistory(id, options?)` | End suspension; `finalName` renames state |
+| `hostControl.resumeHistory(suspensionID, commit?)` | End suspension; `commit` is boolean (default true). To rename state, set `suspensionID.finalName` before calling. |
 | `hostControl.registerAutoCloseDocument(docId)` | Auto-close on modal exit |
 | `hostControl.unregisterAutoCloseDocument(docId)` | Cancel auto-close |
 
@@ -678,12 +702,12 @@ Requires `"featureFlags": { "CSSNextSupport": true }` in manifest. Without this 
 | `transition`, `@keyframes` | No animations |
 | `grid` layout | Flexbox only |
 | `position: sticky` | Not supported |
-| `z-index` | Limited support |
 | `float`, `clear` | Not supported |
 | `cursor` | Limited; may not revert |
 | `background-repeat` | Declared but non-functional |
 | `baseline` alignment | Buggy/unreliable |
-| `text-decoration` | Limited |
+
+Note: `z-index` **is** supported, but no element can overlay a widget with text-editing capability (text fields always render above). `text-decoration` is supported (listed above) with minor rendering caveats.
 
 UXP uses a custom layout engine, **not a browser engine**. Flexbox is the primary mechanism.
 
@@ -801,7 +825,9 @@ Types: `text` (default), `numeric` (-214748.36 to 214748.36), `search`, `passwor
 | `sp-body` | size (XS-XL) | |
 | `sp-detail` / `sp-label` | size / isrequired, slot="label" | |
 | `sp-tooltip` | | `location` controls tip direction, not position |
-| `sp-action-menu` | | `change` |
+| `sp-action-menu` | | `change` (SWC-originated — requires `enableSWCSupport`) |
+
+Note: `sp-action-group`, `sp-action-menu`, `sp-button-group` originate from Spectrum Web Components (SWC) — they are not in the core UXP widget set and require `"enableSWCSupport": true` in `featureFlags`.
 
 40 built-in icons: chevrons, arrows, checkmarks, alerts, magnifier, cross, star, folder, info, question, settings, etc.
 
@@ -831,7 +857,7 @@ function MySlider() {
 
 #### Action Notification Listener
 
-Document-modifying events (layer changes, selections, filters). Since v23.0. 198 action events available.
+Document-modifying events (layer changes, selections, filters). Since v23.0. ~219 action events available.
 
 ```javascript
 const { action } = require('photoshop');
@@ -855,7 +881,7 @@ UI and OS events (v23.3+):
 ```javascript
 const { core } = require('photoshop');
 
-await core.addNotificationListener('UI', [{ event: 'userIdle' }], (event, descriptor) => {
+await core.addNotificationListener('UI', ['userIdle'], (event, descriptor) => {
   if (descriptor.idleEnd) console.log('User returned from idle');
 });
 
@@ -1015,9 +1041,13 @@ Permissions: `"plugin"` (own folder), `"request"` (user-picked), `"fullAccess"` 
 
 Panels (v6.4+/PS 24.1+), dialogs (v6.0+). Local HTML (v8.0+). Domains optional (v9.0+). Script injection (v9.0.2+). DnD (v9.1+). `localStorage`/`sessionStorage` NOT available in WebView with local content.
 
+The `allow` field was **removed** from `permissions.webview` in UXP 9.2 / PS 27.4. Configure via `domains` only:
+
 ```json
-"webview": { "allow": "yes", "domains": ["https://example.com"] }
+"webview": { "domains": ["https://example.com"] }
 ```
+
+(Older examples showing `"allow": "yes"` still parse but the field is ignored on UXP 9.2+.)
 
 ### Hybrid Plugins (C++ Bridge)
 
@@ -1040,24 +1070,24 @@ Build: Hybrid Plugin SDK from Adobe Developer Console. macOS unsigned need secur
 
 | Property | Type | R/W | Min Ver | Description |
 |---|---|---|---|---|
-| `activeDocument` | Document | R/W | 22.5 | Currently active document |
+| `activeDocument` | Document | R/W | 23.0 | Currently active document |
 | `foregroundColor` | SolidColor | R/W | 24.2 | Foreground color |
 | `backgroundColor` | SolidColor | R/W | 24.2 | Background color |
-| `currentTool` | string | R | 22.5 | Active tool name |
-| `documents` | Documents | R | 22.5 | Open document collection |
-| `fonts` | TextFonts | R | 22.5 | Available fonts |
+| `currentTool` | string | R | 23.0 | Active tool name |
+| `documents` | Documents | R | 23.0 | Open document collection |
+| `fonts` | TextFonts | R | 23.0 | Available fonts |
 | `preferences` | Preferences | R | 24.0 | Application preferences |
 | `actionTree` | ActionSet[] | R | 23.0 | Recorded action sets |
-| `displayDialogs` | DialogModes | R/W | 22.5 | Dialog display mode |
+| `displayDialogs` | DialogModes | R/W | 23.0 | Dialog display mode |
 
 **Methods:**
 
 | Method | Description | Min Ver |
 |---|---|---|
-| `createDocument(options?)` | Create new document | 22.5 |
-| `open(entry?)` | Open file or file picker | 22.5 |
-| `bringToFront()` | Bring Photoshop to front | 22.5 |
-| `showAlert(message)` | Display alert dialog | 22.5 |
+| `createDocument(options?)` | Create new document | 23.0 |
+| `open(entry?)` | Open file or file picker | 23.0 |
+| `bringToFront()` | Bring Photoshop to front | 23.0 |
+| `showAlert(message)` | Display alert dialog | 23.0 |
 | `convertUnits(value, from, to)` | Convert between units | 23.4 |
 | `getColorProfiles(mode)` | List color profiles for mode | 24.1 |
 | `updateUI()` | Force UI refresh (no effect outside tracking contexts) | 26.0 |
@@ -1073,21 +1103,23 @@ Build: Hybrid Plugin SDK from Adobe Developer Console. macOS unsigned need secur
 | `convertGlobalToLocal(point)` | Screen to panel coords | 26.0 |
 | `getActiveTool()` | Get active tool info | 22.5 |
 | `performMenuCommand(options)` | Execute menu command by ID | 22.5 |
-| `getLayerTree(options?)` / `getLayerTreeSync(options?)` | Layer hierarchy | 22.5 |
-| `getLayerGroupContents(opts)` / `getLayerGroupContentsSync(opts)` | Group children | 22.5 |
-| `isModal()` | Check if in modal state | 22.5 |
-| `historySuspended()` | Check if history suspended | 22.5 |
+| `getLayerTree(options?)` / `getLayerTreeSync(options?)` | Layer hierarchy | 23.1 |
+| `getLayerGroupContents(opts)` / `getLayerGroupContentsSync(opts)` | Group children | 23.1 |
+| `isModal()` | Check if in modal state | 23.1 |
+| `historySuspended()` | Check if history suspended | 23.1 |
 | `calculateDialogSize(options)` | Compute dialog dimensions | 22.5 |
-| `getCPUInfo()` / `getGPUInfo()` | Hardware information | 22.5 |
-| `setExecutionMode(mode)` | Set plugin execution mode | 22.5 |
+| `getCPUInfo()` / `getGPUInfo()` | Hardware information | 23.1 |
+| `setExecutionMode(mode)` | Set plugin execution mode | 23.2 |
 | `translateUIString(key)` | Localize string | 22.5 |
-| `redrawDocument(docId)` | Force document redraw | 22.5 |
-| `addSDKMessagingListener(callback)` | Listen for C++ bridge messages | 22.5 |
-| `sendSDKPluginMessage(id, data)` | Send to C++ bridge | 22.5 |
+| `redrawDocument(docId)` | Force document redraw | 24.1 |
+
+**Hybrid C++ bridge messaging** lives on `photoshop.messaging`, not `core`:
+- `photoshop.messaging.addUXPMessageListener(callback)` — listen for C++ → JS messages
+- `photoshop.messaging.sendPluginMessage(id, data)` — send JS → C++ messages
 
 ### Preferences API (v24.0+)
 
-13 groups via `app.preferences`: `cursors`, `fileHandling`, `general`, `guidesGridsAndSlices`, `history`, `interface`, `performance`, `plugins`, `tools`, `transparency`, `type`, `units`, `workspace`
+12 groups via `app.preferences`: `cursors`, `fileHandling`, `general`, `guidesGridsAndSlices`, `history`, `interface`, `notifications` (v26.11), `performance`, `tools`, `transparencyAndGamut`, `type`, `unitsAndRulers`
 
 ### Prototype Extensions
 
@@ -1116,7 +1148,7 @@ Document.prototype.getVisibleLayers = function() {
 8. **No CSS Grid** — flexbox only (box-shadow/transforms available with `CSSNextSupport` flag)
 
 ### UI
-9. Text fields always render above other content — no element can overlay them
+9. Widgets with text-editing capability render above other content — no element can overlay text-editing widgets (affects `z-index` planning)
 10. Complex SVG may fail or render unexpectedly
 11. Grayscale `<img>` fails to render but occupies DOM space
 12. `<img>` in dialogs needs explicit width/height or dialog resizes incorrectly
@@ -1125,7 +1157,7 @@ Document.prototype.getVisibleLayers = function() {
 15. `sp-tooltip` `location` controls tip direction, not position
 16. Numeric `sp-textfield` range: -214748.36 to 214748.36
 17. DnD fully unsupported
-18. Scroll views don't auto-scroll to focused controls (macOS)
+18. Scroll views don't auto-scroll to focused controls when tabbing on macOS
 19. `<label for="id">` unsupported — wrap label around control
 20. `<option>` requires explicit `value`
 21. `<option>` doesn't support `disabled`

@@ -7,7 +7,7 @@ description: Use when building, modifying, or debugging Adobe Photoshop UXP plug
 
 Reference for writing Photoshop UXP plugins (JavaScript/HTML) and Lightroom Classic plugins (Lua). Covers what the SDKs allow, what they don't, and the non-obvious pitfalls that burn hours.
 
-Baseline: UXP 9.2.0 / Manifest v5 / Photoshop 27.4. LrC 15.2 SDK / Lua 5.1.5.
+Baseline: UXP 9.2.0 / Manifest v5 / Photoshop 27.4. LrC 15.3 SDK / Lua 5.1.5.
 
 ## When to Use
 
@@ -37,9 +37,9 @@ Don't use for:
 | Pixel write | `imaging.putPixels()` | None |
 | UI | HTML/CSS/JS + Spectrum `sp-*` | `LrView` declarative widgets only |
 | Canvas/drawing | Limited 2D (no `drawImage`/`getImageData`/`toDataURL`) | None |
-| Document DOM | Full: 28 Document props/methods, 27+46 Layer props/methods | Catalog-centric: `LrCatalog`, `LrPhoto` |
+| Document DOM | Full: 30 Document props + 29 methods, 28 Layer props + 55 methods (38 filter + 17 other) | Catalog-centric: `LrCatalog`, `LrPhoto` |
 | Selection API | Full `Selection` class (v25.0+) | `LrSelection` namespace (rating, flag, label, nav) |
-| AI features | `generativeUpscale` (v26.4+) | denoise, reflection removal, distraction detection |
+| AI features | `generativeUpscale` (v27.2+) | denoise, reflection removal, distraction detection |
 | Develop events | `action.addNotificationListener` | `LrDevelopController.addAdjustmentChangeObserver` |
 | Plugin types | Panel, Command | Export, Publish, Metadata, Filter, Library menu |
 | Develop-panel UI | Panels dock anywhere | **Cannot** add Develop-right-panel UI — only floating dialog |
@@ -177,11 +177,12 @@ await core.executeAsModal(async (ctx) => {
 const { action } = require('photoshop');
 const result = await action.batchPlay([{
   _obj: "get",
-  _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" },
-             { _ref: "document", _enum: "ordinal", _value: "targetEnum" }],
+  _target: [{ _property: "opacity" },
+            { _ref: "layer", _enum: "ordinal", _value: "targetEnum" },
+            { _ref: "document", _enum: "ordinal", _value: "targetEnum" }],
   _options: { dialogOptions: "silent" }
 }], {});
-// 5 reference forms: ID (_id), Index (_index), Name (_name), Enum (_enum/_value), Property (_property)
+// 5 reference forms: ID (_id), Index (_index), Name (_name), Enum (_enum/_value), Property (_property, bare — no _ref)
 ```
 
 **multiGet for bulk reads** (more efficient than multiple get calls):
@@ -267,16 +268,15 @@ entrypoints.setup({
   "name": "My Plugin",
   "version": "1.0.0",
   "main": "index.html",
-  "host": [{ "app": "PS", "minVersion": "24.0.0",
-             "data": { "apiVersion": 2, "loadEvent": "use" } }],
+  "host": { "app": "PS", "minVersion": "24.0.0",
+            "data": { "apiVersion": 2, "loadEvent": "use" } },
   "requiredPermissions": {
     "localFileSystem": "fullAccess",
     "network": { "domains": ["https://api.example.com"] },
     "clipboard": "readAndWrite",
     "webview": { "allow": "yes", "domains": ["https://example.com"] }
   },
-  "featureFlags": { "CSSNextSupport": true },
-  "enableSWCSupport": true
+  "featureFlags": { "enableSWCSupport": true, "CSSNextSupport": true }
 }
 ```
 - `apiVersion: 2` required for modern imaging API
@@ -290,9 +290,9 @@ await action.addNotificationListener(
   ['set', 'select', 'make', 'delete', 'open'],
   (name, desc) => scheduleRefresh()
 );
-// ~198 action events available
+// ~219 action events available
 // Prefer userIdle for heavy re-renders:
-await core.addNotificationListener('UI', [{ event: 'userIdle' }], refresh);
+await core.addNotificationListener('UI', ['userIdle'], refresh);
 ```
 
 ### executeAsModal
@@ -440,7 +440,7 @@ props:addObserver("inputKey", function(t, k, v)
 end)
 ```
 
-### Complete develop parameters (117 global)
+### Complete develop parameters (by panel)
 
 adjustPanel: `Temperature`, `Tint`, `Exposure`, `Highlights`, `Shadows`, `Brightness`, `Contrast`, `Whites`, `Blacks`, `Texture`, `Clarity`, `Dehaze`, `Vibrance`, `Saturation`, `PresetAmount`, `ProfileAmount`
 
@@ -464,17 +464,17 @@ Other: `straightenAngle`
 
 ### Local adjustment parameters by process version
 
-**v2 (8 params):** `local_Exposure`, `local_Brightness`, `local_Contrast`, `local_Saturation`, `local_Clarity`, `local_Sharpness`, `local_ColorNoise`, `local_Tint`
+**v2 (8 params):** `local_Exposure`, `local_Contrast`, `local_Clarity`, `local_Saturation`, `local_Sharpness`, `local_ToningLuminance`, `local_ToningHue`, `local_ToningSaturation`
 
-**v3/v4 (18 params):** all v2 params + `local_Temperature`, `local_Highlights`, `local_Shadows`, `local_Whites`, `local_Blacks`, `local_Dehaze`, `local_Vibrance`, `local_Defringe`, `local_Moire`, `local_LuminanceNoise`
+**v3/v4 (18 params):** `local_Temperature`, `local_Tint`, `local_Exposure`, `local_Contrast`, `local_Highlights`, `local_Shadows`, `local_Clarity`, `local_Saturation`, `local_ToningHue`, `local_ToningSaturation`, `local_Sharpness`, `local_LuminanceNoise`, `local_Moire`, `local_Defringe`, `local_Blacks`, `local_Whites`, `local_Dehaze`, `local_PointColors`
 
-**v5 (23 params + curves):** all v3/v4 params + `local_Texture`, `local_Hue`, `local_HueRange`, `local_WhiteBalance`, `local_CurvePoints`, `local_CurvePointsV`, `local_CurvePointsR`, `local_CurvePointsG`, `local_CurvePointsB`
+**v5 (25 params):** all v3/v4 + `local_Texture`, `local_Hue`, `local_Amount`, `local_Maincurve`, `local_Redcurve`, `local_Greencurve`, `local_Bluecurve`
 
-**v6 (27 params):** all v5 params + `local_Grain`, `local_RefineSaturation`
+**v6 (27 params):** all v5 + `local_Grain`, `local_RefineSaturation`
 
-### LrDevelopController key functions (94 total)
+### LrDevelopController key functions (95 in SDK)
 
-**Get/Set:** `getValue(param)`, `setValue(param, value)`, `getRange(param)`, `increment(param)`, `decrement(param)`, `resetToDefault(param)`, `resetAllDevelopAdjustments()`, `startTracking(param)`, `stopTracking()`, `trackValue(param, value)`, `setTrackingDelay(seconds)`
+**Get/Set:** `getValue(param)`, `setValue(param, value)`, `getRange(param)`, `increment(param)`, `decrement(param)`, `resetToDefault(param)`, `resetAllDevelopAdjustments()`, `startTracking(param)`, `stopTracking()`, `setTrackingDelay(seconds)`, `setMultipleAdjustmentThreshold(amount)`
 
 **Observation:** `addAdjustmentChangeObserver(context, table, callback)`
 
@@ -484,9 +484,10 @@ Other: `straightenAngle`
 - Mask types: brush, gradient, radialGradient, rangeMask, aiSelection
 - Mask subtypes: color, luminance, depth, subject, sky, background, objects, people, landscape
 
-**Spots (SDK 14.1+):** `countAllSpots()`, `getAllSpots()`, `getSelectedSpotIndex()`, `getSelectedSpotParams()`, `setSelectedSpotParams(params)`, `deleteSelectedSpot()`, `refreshSelectedSpot()`, `gotoNextVariation()`, `gotoPreviousVariation()`
+**Spots (SDK 14.1+):** `countAllSpots()`, `getAllSpots()`, `getSelectedSpotIndex()`, `getSelectedSpotParams()`, `getSelectedSpotType()`, `setSelectedSpotIndex(index)`, `setSelectedSpotParams(params)`, `setSelectedSpotType(spotType, useGenAI)`, `moveSelectedSpot(dx, dy)`, `deleteSelectedSpot()`, `deleteSelectedVariation()`, `refreshSelectedSpot()`, `gotoNextVariation()`, `gotoPreviousVariation()`
+- Spot types: `heal_patchmatch`, `heal`, `clone` (NOT "remove" — `goToRemove()` opens the Remove tool but the inner spot types are these three)
 
-**AI/Enhance (SDK 14.5+):** `setEnhance()` (SDK 15.3), `changeDenoiseAmount(amount)`, `getEnhancePanelState()`, `toggleReflectionRemoval()`, `changeReflectionRemovalAmount(amount)`, `detectDistractingPeople()`, `applyRemovalOnDetectedDistractingPeople()`
+**AI/Enhance (SDK 14.5+):** `setEnhance(paramName, value, denoiseAmount)` (SDK 15.3 — `paramName` ∈ `"denoise"`, `"rawDetails"`, `"superRes"`; `value` boolean), `toggleEnhance(paramName, denoiseAmount, callback, callbackFuncArgTable)` (deprecated, use `setEnhance`), `changeDenoiseAmount(amount)`, `getEnhancePanelState()`, `toggleReflectionRemoval()`, `changeReflectionRemovalAmount(amount)`, `changeReflectionRemovalQuality(amount)`, `getReflectionRemovalPanelState()`, `detectDistractingPeople()`, `applyRemovalOnDetectedDistractingPeople()`
 
 **Point Color (SDK 13.2+):** `addPointColorSwatch()`, `deletePointColorSwatch()`, `selectPointColorSwatch(index)`, `updateSelectedPointColorSwatch(params)`, `getSelectedPointColorSwatchIndex()`
 
@@ -494,9 +495,9 @@ Other: `straightenAngle`
 
 **Process Version:** `getProcessVersion()`, `setProcessVersion(version)` — "Version 1" through "Version 6"
 
-**Other:** `setAutoTone()`, `setAutoWhiteBalance()`, `showClipping(which)`, `revealPanel(panelID)`, `revealAdjustedControls()`, `resetCrop()`, `resetTransforms()`, `resetMasking()`, `resetHealing()`, `resetRedeye()`
+**Other:** `setActiveColorGradingView(view)`, `getActiveColorGradingView()`, `setAutoTone()`, `setAutoWhiteBalance()`, `showClipping()` (no args), `revealPanel(paramOrPanelID, subPanelID?)`, `revealPanelIfVisible(panelID)`, `revealAdjustedControls()`, `resetCrop()`, `resetTransforms()`, `resetMasking()`, `resetRedeye()`, `resetFilterWithName(name)`. Deprecated: `resetHealing()`, `resetBrushing()`, `resetCircularGradient()`, `resetGradient()`, `resetSpotRemoval()`, `goToHealing()`, `goToSpotRemoval()`, `goToDevelopGraduatedFilter()`, `goToDevelopRadialFilter()`.
 
-Panel IDs: adjustPanel, tonePanel, mixerPanel, colorGradingPanel, detailPanel, effectsPanel, lensCorrectionsPanel, calibratePanel, lensBlurPanel
+Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detailPanel`, `effectsPanel`, `lensCorrectionsPanel`, `calibratePanel`, `lensBlurPanel`. Mixer sub-panel IDs (for `revealPanel(panelID, subPanelID)`, SDK 13.2+): `hslColorPanel`, `pointColorPanel`.
 
 ## Common Mistakes
 
@@ -518,14 +519,16 @@ Panel IDs: adjustPanel, tonePanel, mixerPanel, colorGradingPanel, detailPanel, e
 | Creating tasks inside `processRenderedPhotos` | LrC already runs it in a task. Nesting tasks causes incorrect behavior. |
 | Calling `LrDialogs` during `LrShutdownApp` | Namespace unavailable during app shutdown. Use `LrShutdownPlugin` instead. |
 | Not holding `requestJpegThumbnail` return value | May be garbage collected, callback never fires. Store in a local variable. |
+| Using `break` in LrC `directoryEntries`/`files`/`recursiveFiles` loops | Not safe. Collect results into a table or use a flag + early `return`. |
+| Modifying nested tables in `LrPrefs` expecting auto-save | Only top-level key reassignment triggers persistence. Reassign the root key after mutating nested values. Use `prefs:pairs()` not Lua `pairs(prefs)`. |
 
 ## Deeper References (in this skill directory)
 
-- **`lrc-sdk.md`** — Full Lightroom Classic SDK reference: all plugin types (export, publish, filter, metadata), `Info.lua` manifest, `LrView` widgets and data binding, `LrDevelopController` (94 functions, 117 develop params), full module catalog (40+ modules), LrC memory-leak prevention details, export pipeline, catalog operations, external communication (LrSocket, LrHttp, Controller SDK), and the processor CLI spec for LrC-to-Rust bridging.
-- **`uxp-photoshop.md`** — Full Photoshop UXP reference: Manifest v5, Document/Layer DOM (28+28 Document, 27+46 Layer properties/methods, 30+ filter methods), Selection class, Imaging API full signatures, batchPlay and action system (5 reference forms, action recording), executeAsModal details, Spectrum UXP + SWC component catalogs, HTML/CSS support and limitations, Canvas API limits, event system, text/typography API, color management, external communication (WebView, hybrid C++ bridge, network), and the known-issues catalog.
+- **`lrc-sdk.md`** — Full Lightroom Classic SDK reference: all plugin types (export, publish, filter, metadata), `Info.lua` manifest, `LrView` widgets and data binding, `LrDevelopController` (95 functions), full module catalog (40+ modules), LrC memory-leak prevention details, export pipeline, catalog operations, external communication (LrSocket, LrHttp, Controller SDK), and the processor CLI spec for LrC-to-Rust bridging.
+- **`ps-uxp-sdk.md`** — Full Photoshop UXP reference: Manifest v5, Document/Layer DOM (28+28 Document, 27+46 Layer properties/methods, 30+ filter methods), Selection class, Imaging API full signatures, batchPlay and action system (5 reference forms, action recording), executeAsModal details, Spectrum UXP + SWC component catalogs, HTML/CSS support and limitations, Canvas API limits, event system, text/typography API, color management, external communication (WebView, hybrid C++ bridge, network), and the known-issues catalog.
 
 **When to load deep references:**
-- `uxp-photoshop.md` — when using batchPlay descriptors, Document/Layer DOM methods, Selection class, filter methods, SWC components, text/typography APIs, or debugging known issues
+- `ps-uxp-sdk.md` — when using batchPlay descriptors, Document/Layer DOM methods, Selection class, filter methods, SWC components, text/typography APIs, or debugging known issues
 - `lrc-sdk.md` — when building export/publish services, working with catalog queries (`findPhotos`, custom metadata), building UIs with `LrDialogs.presentFloatingDialog`, using LrSocket/Controller SDK, or needing the full module API reference
 
 The quick-ref snippets above cover common cases. Load deep references only for non-trivial implementations.

@@ -1,6 +1,6 @@
 # Lightroom Classic SDK Reference
 
-Adobe LrC 15.2+ SDK. Lua 5.1.5 sandbox. Use-case organized deep reference for plugin development.
+Adobe LrC 15.3 SDK. Lua 5.1.5 sandbox. Use-case organized deep reference for plugin development.
 
 **Load this file when:** building export/publish services, working with catalog/photo APIs, building plugin UIs, wiring develop-parameter observation, or needing the full develop parameter list.
 
@@ -115,13 +115,13 @@ Auto-loaded plugins (in Modules folder) cannot be removed via Plugin Manager, on
 | 10.0 | — | +color grading views, +copy/pasteSettings (10.3) |
 | 11.0 | — | +mask creation/management |
 | 12.1 | — | +bitDepth in getRawMetadata, +addPhoto presets (12.5) |
-| 13.2 | — | +altTextAccessibility, +point color |
-| 13.3 | — | +lens blur |
-| 14.1 | — | +spot editing |
+| 13.2 | — | +altTextAccessibility, +point color, +revealPanel subPanelID |
+| 13.3 | — | +lens blur, +updateAISettings |
+| 14.1 | — | +spot editing, +goToEyeCorrection |
 | 14.3 | — | +LrApplication.shutdown, +LrSelection.removeFromCatalog |
-| 14.5 | — | +AI/enhance (toggleEnhance) |
+| 14.5 | — | +AI/enhance (toggleEnhance), +hasFilterWithName, +resetFilterWithName |
 | 15.0 | — | +haptic observers |
-| 15.3 | — | +setEnhance (replaces toggleEnhance), +isAvailableForEditing |
+| 15.3 | — | +setEnhance (replaces toggleEnhance), +isAvailableForEditing, +needsUpdateAISettings |
 
 ### Debugging
 
@@ -380,9 +380,14 @@ catalog:withPrivateWriteAccessDo("Update plugin data", function(context)
 end)
 
 -- Prolonged write access (long operations, blocks UI)
-catalog:withProlongedWriteAccessDo("Batch update", function(context)
-  -- long-running batch operations
-end)
+-- Signature: withProlongedWriteAccessDo(params, timeoutParams)
+catalog:withProlongedWriteAccessDo({
+  title = "Batch update",
+  pluginName = "My Plugin",
+  func = function(context, progress)
+    -- long-running batch operations; yield periodically with LrTasks.yield()
+  end,
+}, { timeout = 30 })
 ```
 
 **Gotchas:**
@@ -434,21 +439,21 @@ local results = catalog:findPhotos{
 
 **Selection:** getTargetPhoto(), getTargetPhotos(), getMultipleSelectedOrAllPhotos(), setSelectedPhotos(primary, others)
 
-**Import:** addPhoto(path, opts) — opts: `metadataPresetUUID`, `developPresetUUID` (SDK 12.5)
+**Import:** addPhoto(path, stackWithPhoto, position, metadataPresetUUID, developPresetUUID) — presetUUIDs first supported SDK 12.5
 
-**Collections:** createCollection(name, parent, opts), createCollectionSet(name, parent), createSmartCollection(name, parent, opts), getActiveSources(), setActiveSources(sources)
+**Collections:** createCollection(name, parent, canReturnPrior), createCollectionSet(name, parent, canReturnPrior), createSmartCollection(name, searchDesc, parent, canReturnPrior), getActiveSources(), setActiveSources(sources)
 
-**Search:** findPhotos(searchDesc), findPhotoByUuid(uuid) — **Gotcha:** param is named `path` but is a UUID string
+**Search:** findPhotos{searchDesc=...}, findPhotoByUuid(uuid) — **Gotcha:** param is named `path` but is a UUID string
 
 ### LrPhoto — Core Methods
 
 **Metadata:** getRawMetadata(key), getFormattedMetadata(key), setRawMetadata(key, value) (requires write gate), getPropertyForPlugin(plugin, key), setPropertyForPlugin(plugin, key, value, version) (requires private write gate)
 
-**Develop:** getDevelopSettings() (experimental), applyDevelopPreset(preset, plugin) (presetAmount 0-200, updateAISettings), applyDevelopSettings(settings) (experimental), copySettings/pasteSettings(opts) (SDK 10.3+), quickDevelopAdjustValue(param, direction)
+**Develop:** getDevelopSettings() (experimental), applyDevelopPreset(preset, plugin) (presetAmount 0-200, updateAISettings), applyDevelopSettings(settings, optHistoryName, optFlattenAutoNow) (experimental), copySettings/pasteSettings(opts) (SDK 10.3+), quickDevelopAdjustImage/Crop/WhiteBalance (no `quickDevelopAdjustValue` — the real methods are `quickDevelopAdjustImage`, `quickDevelopAdjustWhiteBalance`, `quickDevelopSetWhiteBalance`, `quickDevelopSetTreatment`, `quickDevelopCropAspect`)
 
 **Thumbnails:** requestJpegThumbnail(width, height, callback) — returns request object (hold reference!), buildSmartPreview(), deleteSmartPreview()
 
-**Other:** rotateLeft/rotateRight(), addKeyword/removeKeyword(keyword) (requires write gate), isAvailableForEditing() (SDK 15.3), needsUpdateAISettings(), updateAISettings()
+**Other:** rotateLeft/rotateRight(), addKeyword/removeKeyword(keyword) (requires write gate), isAvailableForEditing() (SDK 15.3), needsUpdateAISettings() (SDK 15.3), updateAISettings() (SDK 13.3)
 
 ### getDevelopSettings — Typo Warnings
 
@@ -471,7 +476,7 @@ The official API has these typos in returned keys. Use exactly as shown:
 | rating | number | 0-5, nil if unrated |
 | colorNameForLabel | string | red/yellow/green/blue/purple/none |
 | pickStatus | number | 1=flagged, 0=unflagged, -1=rejected |
-| fileFormat | string | RAW, DNG, JPG, TIFF, PSD, PNG, VIDEO |
+| fileFormat | string | RAW, DNG, JPG, TIFF, PSD, VIDEO (per LrPhoto docs) |
 | width / height | number | Pixel dimensions (uncropped) |
 | aspectRatio | number | width/height |
 | isCropped | boolean | |
@@ -700,16 +705,16 @@ end)
 | presentFloatingDialog(args) | Modeless floating window. `blockTask = true` to keep task alive for observers. `selectionChangeObserver`, `sourceChangeObserver`, `windowWillClose` callbacks. |
 | confirm(msg, info, okVerb, cancelVerb, otherVerb) | Returns `'ok'`/`'cancel'`/`'other'` |
 | message(msg, info, style) | Simple message dialog |
+| messageWithDoNotShow(args) | Message with "don't show again" checkbox |
 | showError(msg) | Error dialog. Handles LrErrors strings. |
 | showBezel(msg, fadeDelay) | Toast notification. Only one at a time. |
 | showModalProgressDialog(args) | Progress dialog with cancel support |
 | stopModalWithResult(result) | Dismiss modal from within |
 | runOpenPanel(args) | File/folder open dialog |
 | runSavePanel(args) | File save dialog |
-| presentModalProgressDialog(args) | Alias for showModalProgressDialog |
 | attachErrorDialogToFunctionContext(context) | Auto-show errors on context failure |
 | resetDoNotShowFlag(key) | Reset "don't show again" flags |
-| promptForActionWithDoNotShowAgain(args) | Dialog with "don't show again" checkbox |
+| promptForActionWithDoNotShow(args) | Dialog with "don't show again" checkbox |
 
 ### View Layout Patterns
 
@@ -800,7 +805,7 @@ local body, headers = LrHttp.post(url, postBody, requestHeaders, method, timeout
 local body, headers = LrHttp.postMultipart(url, content, requestHeaders)
 ```
 
-Must be called from an async task. Error handling: returns `nil, { error = { errorCode = "..." } }`. Error codes: `cancelled`, `badURL`, `timedOut`, `cannotFindHost`, `cannotConnectToHost`, `networkConnectionLost`, `notConnectedToInternet`.
+Must be called from an async task. Error handling: returns `nil, { error = { errorCode = "..." } }`. Error codes: `cancelled`, `badURL`, `timedOut`, `cannotFindHost`, `cannotConnectToHost`, `resourceUnavailable`, `networkConnectionLost`, `redirectError`, `badServerResponse`, `authenticationError`, `securityError`, `serverCertificateHasBadDate`, `serverCertificateHasUnknownRoot`.
 
 Set `Content-Type = 'skip'` to omit the Content-Type header. Streaming uploads via callback functions (SDK 4.0+).
 
@@ -829,6 +834,8 @@ LrShell.openPathsViaCommandLine(paths, appPath)
 ## 7. Develop Parameter Reference
 
 ### Complete Parameter List by Panel
+
+The SDK does not publish a single total count; the full global list (sum across panels below) is the canonical enumeration.
 
 ```
 adjustPanel: Temperature, Tint, Exposure, Highlights, Shadows, Brightness, Contrast,
@@ -885,65 +892,71 @@ Other: straightenAngle
 
 | Process Version | Parameters |
 |---|---|
-| v2 (8 params) | local_Exposure, local_Brightness, local_Contrast, local_Saturation, local_Clarity, local_Sharpness, local_ColorNoise, local_Moire |
-| v3/v4 (18 params) | v2 + local_Highlights, local_Shadows, local_Temperature, local_Tint, local_Dehaze, local_Texture, local_Whites, local_Blacks, local_LuminanceNoise, local_Defringe |
-| v5 (23 + curves) | v3/v4 + local_Hue, local_Exposure2012, local_Contrast2012, local_Highlights2012, local_Shadows2012 + local_ToneCurvePV2012/Red/Green/Blue |
-| v6 | v5 + local_Grain, local_RefineSaturation |
+| v2 (8 params) | local_Exposure, local_Contrast, local_Clarity, local_Saturation, local_Sharpness, local_ToningLuminance, local_ToningHue, local_ToningSaturation |
+| v3/v4 (18 params) | local_Temperature, local_Tint, local_Exposure, local_Contrast, local_Highlights, local_Shadows, local_Clarity, local_Saturation, local_ToningHue, local_ToningSaturation, local_Sharpness, local_LuminanceNoise, local_Moire, local_Defringe, local_Blacks, local_Whites, local_Dehaze, local_PointColors |
+| v5 (25 params) | v3/v4 + local_Texture, local_Hue, local_Amount, local_Maincurve, local_Redcurve, local_Greencurve, local_Bluecurve |
+| v6 (27 params) | v5 + local_Grain, local_RefineSaturation |
 
-### LrDevelopController Functions — By Category
+### LrDevelopController Functions — Complete (95 functions in SDK 15.3)
 
-**Get/Set (12 functions):**
-getValue(param), setValue(param, value), getRange(param), increment(param), decrement(param), resetToDefault(param), resetAllDevelopAdjustments(), startTracking(param), stopTracking(), trackValue(param, value), setTrackingDelay(seconds), addAdjustmentChangeObserver(context, observer, callback)
+**Get/Set (12):**
+getValue(param), setValue(param, value), getRange(param), increment(param), decrement(param), resetToDefault(param), resetAllDevelopAdjustments(), startTracking(param), stopTracking(), setTrackingDelay(seconds), setMultipleAdjustmentThreshold(amount), addAdjustmentChangeObserver(context, observer, callback)
 
-**Tools (9 functions):**
-selectTool(tool), getSelectedTool(), goToRemove(), goToMasking(), goToEyeCorrection(), editInPhotoshop()
-Tool names: `loupe`, `crop`, `dust`, `redeye`, `masking`, `upright`, `point_color`, `local_point_color`, `depth_refinement`
+**Tools (11):**
+selectTool(tool), getSelectedTool(), goToRemove(), goToMasking(), goToEyeCorrection(eyeCorrectionType?), editInPhotoshop(), hasFilterWithName(name). Deprecated: goToHealing(), goToSpotRemoval(), goToDevelopGraduatedFilter(), goToDevelopRadialFilter().
+Tool names (selectTool): `loupe`, `crop`, `dust`, `redeye`, `masking`, `upright`, `point_color`, `local_point_color`, `depth_refinement`. Note: `getSelectedTool()` does not return `upright`.
+Eye correction types: `"red_eye"`, `"pet_eye"`.
 
-**Masks (SDK 11.0+, 12 functions):**
-createNewMask(type), addToCurrentMask(type), subtractFromCurrentMask(type), intersectWithCurrentMask(type), getAllMasks(), getSelectedMask(), selectMask(index), deleteMask(index), invertMask(), duplicateAndInvertMask(), toggleHideMask(), toggleOverlay()
+**Masks (SDK 11.0+, 17):**
+createNewMask(maskType, maskSubtype?), addToCurrentMask(maskType, maskSubtype?), subtractFromCurrentMask(maskType, maskSubtype?), intersectWithCurrentMask(maskType, maskSubtype?), getAllMasks(), getSelectedMask(), selectMask(id, param), deleteMask(id, param), invertMask(id, param), duplicateAndInvertMask(id, param), toggleHideMask(id, param), toggleOverlay(), selectMaskTool(id, param), getSelectedMaskTool(), deleteMaskTool(id, param), toggleHideMaskTool(id, param), toggleInvertMaskTool(id, param)
 Mask types: `brush`, `gradient`, `radialGradient`, `rangeMask`, `aiSelection`
-Mask subtypes: `color`, `luminance`, `depth`, `subject`, `sky`, `background`, `objects`, `people`, `landscape`
+Mask subtypes (only with rangeMask or aiSelection): `color`, `luminance`, `depth`, `subject`, `sky`, `background`, `objects`, `people`, `landscape`
 
-**Spots (SDK 14.1+, 14 functions):**
-countAllSpots(), getAllSpots(), getSelectedSpotIndex(), getSelectedSpotParams(), getSelectedSpotType(), setSelectedSpotIndex(idx), setSelectedSpotParams(params), setSelectedSpotType(type), moveSelectedSpot(dx, dy), deleteSelectedSpot(), refreshSelectedSpot(), gotoNextVariation(), gotoPreviousVariation()
-Spot types: `heal`, `clone`, `remove`
+**Spots (SDK 14.1+, 14):**
+countAllSpots(), getAllSpots(), getSelectedSpotIndex(), getSelectedSpotParams(), getSelectedSpotType(), setSelectedSpotIndex(idx), setSelectedSpotParams(params), setSelectedSpotType(spotType, useGenAI), moveSelectedSpot(dx, dy), deleteSelectedSpot(), deleteSelectedVariation(), refreshSelectedSpot(), gotoNextVariation(), gotoPreviousVariation()
+Spot types: `"heal_patchmatch"`, `"heal"`, `"clone"`
 
-**AI/Enhance (SDK 14.5+, 8 functions):**
-setEnhance(amount) (SDK 15.3, replaces toggleEnhance), changeDenoiseAmount(delta), getEnhancePanelState(), toggleReflectionRemoval(), changeReflectionRemovalAmount(delta), changeReflectionRemovalQuality(delta), getReflectionRemovalPanelState(), detectDistractingPeople(), applyRemovalOnDetectedDistractingPeople()
+**AI/Enhance (SDK 14.5+, 10):**
+setEnhance(paramName, value, denoiseAmount) (SDK 15.3 — `paramName ∈ "denoise"|"rawDetails"|"superRes"`, `value` boolean, `denoiseAmount` optional number 1-100), toggleEnhance(paramName, denoiseAmount, callback, callbackFuncArgTable) (deprecated, use setEnhance), changeDenoiseAmount(delta), getEnhancePanelState(), toggleReflectionRemoval(), changeReflectionRemovalAmount(delta), changeReflectionRemovalQuality(delta), getReflectionRemovalPanelState(), detectDistractingPeople(), applyRemovalOnDetectedDistractingPeople()
 
-**Point Color (SDK 13.2+, 5 functions):**
-addPointColorSwatch(), deletePointColorSwatch(index), selectPointColorSwatch(index), updateSelectedPointColorSwatch(params), getSelectedPointColorSwatchIndex()
+**Point Color (SDK 13.2+, 6):**
+addPointColorSwatch(), deletePointColorSwatch(index), selectPointColorSwatch(index), updateSelectedPointColorSwatch(params), getSelectedPointColorSwatchIndex(), togglePointColorRangeVisualization()
 
-**Lens Blur (SDK 13.3+):**
-LensBlur parameters via getValue/setValue. setLensBlurBokeh(type), toggleLensBlurDepthVisualization()
+**Lens Blur (SDK 13.3+, 3):**
+setLensBlurBokeh(type), getSelectedLensBlurBokeh(), toggleLensBlurDepthVisualization(). LensBlur params (Active, Amount, CatEye, HighlightsBoost, FocalRange) via getValue/setValue.
 Bokeh types: `Circle`, `SoapBubble`, `Blade`, `Ring`, `Anamorphic`
 
-**Color Grading (SDK 10.0+):**
-setActiveColorGradingView(view)
+**Color Grading (SDK 10.0+, 2):**
+setActiveColorGradingView(view), getActiveColorGradingView()
 Views: `3-way`, `shadow`, `midtone`, `highlight`, `global`
 
-**Process Version:**
+**Process Version (2):**
 getProcessVersion(), setProcessVersion(version)
 Versions: `"Version 1"` through `"Version 6"`
 
-**Navigation and Reset (12 functions):**
-revealPanel(panelID), revealPanelIfVisible(panelID), revealAdjustedControls(), showClipping(which), setAutoTone(), setAutoWhiteBalance(), resetCrop(), resetTransforms(), resetMasking(), resetHealing(), resetRedeye()
-Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detailPanel`, `effectsPanel`, `lensCorrectionsPanel`, `calibratePanel`, `lensBlurPanel`, `tonePanelDetail` (sub-panel), `mixerPanelDetail` (sub-panel)
+**Remove Panel (2):**
+getRemovePanelPreferences(), setRemovePanelPreferences(prefs)
+
+**Navigation and Reset (16):**
+revealPanel(paramOrPanelID, subPanelID?), revealPanelIfVisible(panelID), revealAdjustedControls(), showClipping() (no args), setAutoTone(), setAutoWhiteBalance(), resetCrop(), resetTransforms(), resetMasking(), resetRedeye(), resetFilterWithName(name). Deprecated: resetHealing(), resetBrushing(), resetCircularGradient(), resetGradient(), resetSpotRemoval().
+Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detailPanel`, `effectsPanel`, `lensCorrectionsPanel`, `calibratePanel`, `lensBlurPanel`. Mixer sub-panels (`subPanelID` on `revealPanel`, SDK 13.2+): `hslColorPanel`, `pointColorPanel`.
 
 ### Enumerated Values Summary
 
 | Category | Values |
 |---|---|
-| Panel IDs | adjustPanel, tonePanel, mixerPanel, colorGradingPanel, detailPanel, effectsPanel, lensCorrectionsPanel, calibratePanel, lensBlurPanel + tonePanelDetail, mixerPanelDetail |
-| Tool names | loupe, crop, dust, redeye, masking, upright, point_color, local_point_color, depth_refinement |
+| Panel IDs | adjustPanel, tonePanel, mixerPanel, colorGradingPanel, detailPanel, effectsPanel, lensCorrectionsPanel, calibratePanel, lensBlurPanel |
+| Mixer sub-panel IDs (revealPanel) | hslColorPanel, pointColorPanel |
+| Tool names (selectTool) | loupe, crop, dust, redeye, masking, upright, point_color, local_point_color, depth_refinement |
 | Mask types | brush, gradient, radialGradient, rangeMask, aiSelection |
 | Mask subtypes | color, luminance, depth, subject, sky, background, objects, people, landscape |
-| Spot types | heal, clone, remove |
+| Spot types | heal_patchmatch, heal, clone |
 | Bokeh types | Circle, SoapBubble, Blade, Ring, Anamorphic |
 | Color grading views | 3-way, shadow, midtone, highlight, global |
 | Process versions | Version 1 through Version 6 |
-| Filter names | gradient, radialGradient, brush |
-| Eye correction types | redeye, peteye |
+| Filter names (hasFilterWithName, resetFilterWithName) | enhance, dereflect, remove_people |
+| Eye correction types | red_eye, pet_eye |
+| Enhance param names (setEnhance) | denoise, rawDetails, superRes |
 
 ---
 
@@ -957,7 +970,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 
 **LrTasks** — startAsyncTask(func), startAsyncTaskWithoutErrorHandler(func), sleep(seconds), execute(cmd), pcall(func), canYield(), yield()
 
-**LrFunctionContext** — callWithContext(name, func), postAsyncTaskWithContext(name, func), addCleanupHandler(func), addFailureHandler(func), callWithEmptyEnvironment(func)
+**LrFunctionContext** — Module functions: callWithContext(name, func), postAsyncTaskWithContext(name, func), callWithEmptyEnvironment(func). Instance methods on the `context` object: `context:addCleanupHandler(func)`, `context:addFailureHandler(func)`
 
 **LrBinding** — makePropertyTable(context), keyEquals(key, value), keyIsNil(key), keyIsNotNil(key), keyIsNot(key, value), negativeOfKey(key), andAllKeys(...), orAllKeys(...), kUnsupportedDirection
 
@@ -971,7 +984,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 
 **LrExportSettings** — extensionForFormat(format). Formats: ORIGINAL, JPEG, JXL, AVIF, PNG, TIFF, PSD, PSB, DNG. addVideoExportPresets(), supportableVideoExportFormats()
 
-**LrColor** — constructors: LrColor(), LrColor(r,g,b,a), LrColor(name), LrColor(name,a). Named colors: black, white, gray, red, green, blue, cyan, yellow, magenta, orange, purple, brown. Methods: red(), green(), blue(), alpha()
+**LrColor** — constructors: LrColor(), LrColor(r,g,b,a), LrColor(name), LrColor(name,a). Named colors: black, white, gray, light gray, dark gray, red, green, blue, cyan, yellow, magenta, orange, purple, brown. Methods: red(), green(), blue(), alpha()
 
 **LrDate** — currentTime(), timeFromComponents(...), timestampToComponents(time). **Cocoa epoch: seconds since Jan 1 2001**, NOT Unix epoch. formatShortDate/MediumDate/LongDate(time), timeToW3CDate(time), timeFromPosixDate(posix), timeToPosixDate(cocoa)
 
@@ -979,7 +992,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 
 **LrPathUtils** — child(parent, name), parent(path) (returns nil for root since SDK 2.0), extension(path), addExtension/removeExtension/replaceExtension(path, ext), standardizePath(path), getStandardFilePath(key). Keys: `home`, `temp`, `desktop`, `appPrefs`, `pictures`, `documents`, `appData`
 
-**LrHttp** — get(url, headers, timeout), post(url, body, headers, method, timeout), postMultipart(url, content, headers), openUrlInBrowser(url), parseCookie(headerValue). Error codes: cancelled, badURL, timedOut, cannotFindHost, cannotConnectToHost, networkConnectionLost, notConnectedToInternet
+**LrHttp** — get(url, headers, timeout), post(url, postBody, headers, method, timeout, totalSize), postMultipart(url, content, headers), openUrlInBrowser(url), parseCookie(headerValue). Error codes: `cancelled`, `badURL`, `timedOut`, `cannotFindHost`, `cannotConnectToHost`, `resourceUnavailable`, `networkConnectionLost`, `redirectError`, `badServerResponse`, `authenticationError`, `securityError`, `serverCertificateHasBadDate`, `serverCertificateHasUnknownRoot`
 
 **LrSocket** — bind(opts) with mode `'send'`/`'receive'`
 
@@ -999,9 +1012,9 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 
 **LrErrors** — throwUserError(msg), throwCanceled(), isCanceledError(err)
 
-**LrRecursionGuard** — constructor(), performWithGuard(func), active (property)
+**LrRecursionGuard** — `LrRecursionGuard(name)` constructor. Instance: `guard:performWithGuard(func, ...)` — runs `func` only if not already active on this guard.
 
-**LrProgressScope** — constructor(opts), setPortionComplete(n, total), isCanceled(), done(), setCaption(str), setIndeterminate(bool) (only works inside showModalProgressDialog)
+**LrProgressScope** — constructor(opts), setPortionComplete(n, total), isCanceled(), done(), setCaption(str), setIndeterminate() (no args — only works inside showModalProgressDialog)
 
 **LrSystemInfo** — appWindowSize(), numCPUs(), memSize(), is64Bit(), architecture(), osVersion(), ipAddress(), displayInfo()
 
@@ -1011,7 +1024,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 
 **LrFtp** — create(opts) with protocol `'ftp'`/`'sftp'`. putFile(localPath, remotePath), exists(remotePath), makeDirectory(remotePath), disconnect(). makeFtpPresetPopup(viewFactory, props)
 
-**LrTether** — startTether(opts), stopTether(), triggerCapture(), triggerCaptureBlocking(), isTetherActive()
+**LrTether** — startTether() (no args), stopTether(), triggerCapture(), triggerCaptureBlocking(), isTetherActive()
 
 **LrSounds** — getSystemSounds(), playSystemSound(name). Both require async task. **LrUndo** — undo/redo(), canUndo/canRedo(). **LrSlideshow** — startSlideshow/stopSlideshow()
 
@@ -1027,7 +1040,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 
 **LrPublishService** — createPublishedCollection(name, parent), getChildCollections(), getPublishSettings(), getPluginId() (may have ".N" suffix)
 
-**LrPublishedCollection** — getPublishedPhotos(), addPhotoByRemoteId(photo, remoteId), publishNow(), setRemoteId/Url(id/url)
+**LrPublishedCollection** — getPublishedPhotos(), addPhotoByRemoteId(photo, remoteID, remoteUrl, published), publishNow(doneCallback), setRemoteId/Url(id/url)
 
 **LrPublishedPhoto** — getEditedFlag(), getPhoto(), getRemoteId/Url(), setEditedFlag(flag)
 
@@ -1049,7 +1062,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 | Canvas/Drawing | Limited 2D canvas; SVG + generated images work | No drawing primitives at all |
 | WebView | Panels since UXP 6.4, local HTML since 8.0 | `LrWebViewFactory` — limited |
 | Color Data | Full pixel arrays, color space conversion, profiling | `LrColor` for develop settings only |
-| Event System | Rich notification listeners (198 action events) | `LrCatalog:addPropertyChangeObserver`, limited events |
+| Event System | Rich notification listeners (~219 action events) | `LrCatalog:addPropertyChangeObserver`, limited events |
 | Native Code | Hybrid plugins (C++ bridge) | External tool launched via `LrTasks.execute` |
 | Develop Control | Direct pixel manipulation, `batchPlay` | `LrDevelopController` for sliders only |
 | Document Model | Full DOM (Document, Layer, Channel, Path, Selection, History) | Catalog-centric (LrCatalog, LrPhoto, LrCollection) |
