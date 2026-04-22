@@ -375,7 +375,8 @@ catalog:withWriteAccessDo("Add keywords", function(context)
 end)
 
 -- Private write access (no undo, for plugin-private metadata)
-catalog:withPrivateWriteAccessDo("Update plugin data", function(context)
+-- Signature: withPrivateWriteAccessDo(func, timeoutParams?) — NO action name
+catalog:withPrivateWriteAccessDo(function(context)
   photo:setPropertyForPlugin(_PLUGIN, 'lastSync', os.time())
 end)
 
@@ -566,8 +567,8 @@ return {
 -- Read
 local value = photo:getPropertyForPlugin(_PLUGIN, 'lastSync')
 
--- Write (requires private write gate)
-catalog:withPrivateWriteAccessDo("Update sync", function()
+-- Write (requires private write gate; no action name arg)
+catalog:withPrivateWriteAccessDo(function()
   photo:setPropertyForPlugin(_PLUGIN, 'lastSync', tostring(os.time()))
 end)
 ```
@@ -702,18 +703,18 @@ end)
 | Function | Purpose |
 |---|---|
 | presentModalDialog(args) | Modal dialog. `cancelVerb = "< exclude >"` hides cancel button. `accessoryView` mutually exclusive with `otherVerb`. |
-| presentFloatingDialog(args) | Modeless floating window. `blockTask = true` to keep task alive for observers. `selectionChangeObserver`, `sourceChangeObserver`, `windowWillClose` callbacks. |
-| confirm(msg, info, okVerb, cancelVerb, otherVerb) | Returns `'ok'`/`'cancel'`/`'other'` |
-| message(msg, info, style) | Simple message dialog |
+| presentFloatingDialog(plugin, args) | Modeless floating window. First arg is `_PLUGIN`. `blockTask = true` to keep task alive for observers. `selectionChangeObserver`, `sourceChangeObserver`, `windowWillClose` callbacks. |
+| confirm(message, info, actionVerb, cancelVerb, otherVerb) | Returns `'ok'`/`'cancel'`/`'other'` |
+| message(message, info, style) | Simple message dialog |
 | messageWithDoNotShow(args) | Message with "don't show again" checkbox |
-| showError(msg) | Error dialog. Handles LrErrors strings. |
-| showBezel(msg, fadeDelay) | Toast notification. Only one at a time. |
-| showModalProgressDialog(args) | Progress dialog with cancel support |
-| stopModalWithResult(result) | Dismiss modal from within |
+| showError(errorString) | Error dialog. Handles LrErrors strings. |
+| showBezel(message, fadeDelay) | Toast notification. Only one at a time. |
+| showModalProgressDialog(params) | Progress dialog with cancel support |
+| stopModalWithResult(dialog, result) | Dismiss modal from within |
 | runOpenPanel(args) | File/folder open dialog |
 | runSavePanel(args) | File save dialog |
 | attachErrorDialogToFunctionContext(context) | Auto-show errors on context failure |
-| resetDoNotShowFlag(key) | Reset "don't show again" flags |
+| resetDoNotShowFlag(actionPrefKey) | Reset "don't show again" flags |
 | promptForActionWithDoNotShow(args) | Dialog with "don't show again" checkbox |
 
 ### View Layout Patterns

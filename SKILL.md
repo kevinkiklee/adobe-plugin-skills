@@ -37,7 +37,7 @@ Don't use for:
 | Pixel write | `imaging.putPixels()` | None |
 | UI | HTML/CSS/JS + Spectrum `sp-*` | `LrView` declarative widgets only |
 | Canvas/drawing | Limited 2D (no `drawImage`/`getImageData`/`toDataURL`) | None |
-| Document DOM | Full: 30 Document props + 29 methods, 28 Layer props + 55 methods (38 filter + 17 other) | Catalog-centric: `LrCatalog`, `LrPhoto` |
+| Document DOM | Full: 33 Document props + 29 methods, 28 Layer props + 55 methods (38 filter + 17 other) | Catalog-centric: `LrCatalog`, `LrPhoto` |
 | Selection API | Full `Selection` class (v25.0+) | `LrSelection` namespace (rating, flag, label, nav) |
 | AI features | `generativeUpscale` (v27.2+) | denoise, reflection removal, distraction detection |
 | Develop events | `action.addNotificationListener` | `LrDevelopController.addAdjustmentChangeObserver` |
@@ -84,7 +84,7 @@ Unlocks: `box-shadow`, `transform-origin`, `scaleX`, `scaleY`, `translate`. With
 Both are available as global storage APIs — contrary to some older references listing them as unavailable. However, they are **not** available inside WebView when loading local content.
 
 ### UXP: WebView availability
-WebView works in **panels** since UXP 6.4 / PS 24.1 (not just modal dialogs). Local HTML files supported since UXP 8.0. Domain restrictions optional since UXP 9.0.
+WebView works in **panels** since UXP 6.4 / PS 24.1 (not just modal dialogs). Local HTML files supported since UXP 8.0. Domain restrictions optional since UXP 9.0. The `permissions.webview.allow` field was **removed in UXP 9.1** (PS 27.4) — configure with `domains` only.
 
 ### UXP: executeAsModal anti-patterns
 - **Never swallow exceptions**: `try { await batchPlay(...) } catch(e) {}` prevents automatic cancellation termination. Let exceptions propagate.
@@ -274,7 +274,7 @@ entrypoints.setup({
     "localFileSystem": "fullAccess",
     "network": { "domains": ["https://api.example.com"] },
     "clipboard": "readAndWrite",
-    "webview": { "allow": "yes", "domains": ["https://example.com"] }
+    "webview": { "domains": ["https://example.com"] }
   },
   "featureFlags": { "enableSWCSupport": true, "CSSNextSupport": true }
 }
@@ -480,7 +480,7 @@ Other: `straightenAngle`
 
 **Tools:** `selectTool(name)` — loupe, crop, dust, redeye, masking, upright, point_color, local_point_color, depth_refinement. `getSelectedTool()`, `goToRemove()`, `goToMasking()`, `goToEyeCorrection()`, `editInPhotoshop()`
 
-**Masks (SDK 11.0+):** `createNewMask(type, subtype)`, `addToCurrentMask(type, subtype)`, `subtractFromCurrentMask(type, subtype)`, `intersectWithCurrentMask(type, subtype)`, `getAllMasks()`, `getSelectedMask()`, `selectMask(index)`, `deleteMask()`, `invertMask()`, `duplicateAndInvertMask()`, `toggleHideMask()`, `toggleOverlay()`
+**Masks (SDK 11.0+):** `createNewMask(type, subtype)`, `addToCurrentMask(type, subtype)`, `subtractFromCurrentMask(type, subtype)`, `intersectWithCurrentMask(type, subtype)`, `getAllMasks()`, `getSelectedMask()`, `selectMask(id, param)`, `deleteMask(id, param)`, `invertMask(id, param)`, `duplicateAndInvertMask(id, param)`, `toggleHideMask(id, param)`, `toggleOverlay()`
 - Mask types: brush, gradient, radialGradient, rangeMask, aiSelection
 - Mask subtypes: color, luminance, depth, subject, sky, background, objects, people, landscape
 
@@ -525,7 +525,7 @@ Panel IDs: `adjustPanel`, `tonePanel`, `mixerPanel`, `colorGradingPanel`, `detai
 ## Deeper References (in this skill directory)
 
 - **`lrc-sdk.md`** — Full Lightroom Classic SDK reference: all plugin types (export, publish, filter, metadata), `Info.lua` manifest, `LrView` widgets and data binding, `LrDevelopController` (95 functions), full module catalog (40+ modules), LrC memory-leak prevention details, export pipeline, catalog operations, external communication (LrSocket, LrHttp, Controller SDK), and the processor CLI spec for LrC-to-Rust bridging.
-- **`ps-uxp-sdk.md`** — Full Photoshop UXP reference: Manifest v5, Document/Layer DOM (28+28 Document, 27+46 Layer properties/methods, 30+ filter methods), Selection class, Imaging API full signatures, batchPlay and action system (5 reference forms, action recording), executeAsModal details, Spectrum UXP + SWC component catalogs, HTML/CSS support and limitations, Canvas API limits, event system, text/typography API, color management, external communication (WebView, hybrid C++ bridge, network), and the known-issues catalog.
+- **`ps-uxp-sdk.md`** — Full Photoshop UXP reference: Manifest v5, Document/Layer DOM (33+29 Document, 28+55 Layer properties/methods, 38 filter methods), Selection class, Imaging API full signatures, batchPlay and action system (5 reference forms, action recording), executeAsModal details, Spectrum UXP + SWC component catalogs, HTML/CSS support and limitations, Canvas API limits, event system, text/typography API, color management, external communication (WebView, hybrid C++ bridge, network), and the known-issues catalog.
 
 **When to load deep references:**
 - `ps-uxp-sdk.md` — when using batchPlay descriptors, Document/Layer DOM methods, Selection class, filter methods, SWC components, text/typography APIs, or debugging known issues

@@ -71,7 +71,7 @@ A single plugin can declare multiple entry points of mixed types.
 | `localFileSystem` | `"request"` \| `"plugin"` \| `"fullAccess"` | File system access |
 | `launchProcess` | `{ schemes, extensions }` | Required for `openExternal`/`openPath` |
 | `ipc` | `{ enablePluginCommunication }` | Inter-plugin messaging |
-| `webview` | `{ domains }` | WebView in panels (v6.4+) and dialogs (v6.0+). Domains optional since v9.0. `allow` field removed in UXP 9.2 / PS 27.4. |
+| `webview` | `{ domains }` | WebView in panels (v6.4+) and dialogs (v6.0+). Domains optional since v9.0. `allow` field removed in UXP 9.1 / PS 27.4. |
 | `enableUserInfo` | boolean | User GUID access (PS 25.1, UXP 7.3+) |
 
 **Feature flags:** `CSSNextSupport` enables `box-shadow`, `transform-origin`, `scaleX`, `scaleY`, `translate`. Can be `true` or an array (`["boxShadow", "transformFunctions", "transformProperties"]`) for selective enablement. `enableSWCSupport` enables Spectrum Web Components (35 npm packages, locked to v0.37.0 in UXP 8.0) and **implicitly enables `CSSNextSupport`**. Manifest v5 requires PS 23.3.0+ / UXP 6.0+.
@@ -1041,20 +1041,20 @@ Permissions: `"plugin"` (own folder), `"request"` (user-picked), `"fullAccess"` 
 
 Panels (v6.4+/PS 24.1+), dialogs (v6.0+). Local HTML (v8.0+). Domains optional (v9.0+). Script injection (v9.0.2+). DnD (v9.1+). `localStorage`/`sessionStorage` NOT available in WebView with local content.
 
-The `allow` field was **removed** from `permissions.webview` in UXP 9.2 / PS 27.4. Configure via `domains` only:
+The `allow` field was **removed** from `permissions.webview` in UXP 9.1 / PS 27.4. Configure via `domains` only:
 
 ```json
 "webview": { "domains": ["https://example.com"] }
 ```
 
-(Older examples showing `"allow": "yes"` still parse but the field is ignored on UXP 9.2+.)
+(Older examples showing `"allow": "yes"` still parse but the field is ignored on UXP 9.1+.)
 
 ### Hybrid Plugins (C++ Bridge)
 
 Combine JS with native C++ (`.dylib`/`.dll`). Use for: high-performance pixel processing, custom rendering, relaxed sandbox, Photoshop C++ SDK (`PIUXPSuite`). Entry: `export SPErr PSDLLMain(const char* selector, SPBasicSuite* basicSuite, PIActionDescriptor descriptor);`
 
-**JS->C++:** `core.sendSDKPluginMessage("NativeID", data)` / C++ `AddUXPMessageListener`
-**C++->JS:** C++ `SendUXPMessage(ref, pluginId, desc)` / JS `core.addSDKMessagingListener(cb)`
+**JS->C++:** `require('photoshop').messaging.sendSDKPluginMessage(componentId, data)` / C++ `sUxpProcs->AddUXPMessageListener(ref, handler)`
+**C++->JS:** C++ `sUxpProcs->SendUXPMessage(ref, pluginId, desc)` / JS `require('photoshop').messaging.addSDKMessagingListener(cb)` (plus `removeSDKMessagingListener(cb)`)
 
 Build: Hybrid Plugin SDK from Adobe Developer Console. macOS unsigned need security approval. Debug: JS via UDT, C++ via debugger attach.
 
@@ -1114,8 +1114,9 @@ Build: Hybrid Plugin SDK from Adobe Developer Console. macOS unsigned need secur
 | `redrawDocument(docId)` | Force document redraw | 24.1 |
 
 **Hybrid C++ bridge messaging** lives on `photoshop.messaging`, not `core`:
-- `photoshop.messaging.addUXPMessageListener(callback)` — listen for C++ → JS messages
-- `photoshop.messaging.sendPluginMessage(id, data)` — send JS → C++ messages
+- `photoshop.messaging.addSDKMessagingListener(callback)` — listen for C++ → JS messages
+- `photoshop.messaging.removeSDKMessagingListener(callback)` — remove listener
+- `photoshop.messaging.sendSDKPluginMessage(componentId, data)` — send JS → C++ messages (componentId from C plugin's `PiPL` resource)
 
 ### Preferences API (v24.0+)
 
