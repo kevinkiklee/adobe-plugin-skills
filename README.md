@@ -47,7 +47,13 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 
 ## Installation
 
-### Claude Code
+### Claude Skill CLI
+
+```bash
+skill install kevinkiklee/adobe-plugin-skills
+```
+
+### Claude Code (manual)
 
 ```bash
 # Clone into your skills directory
