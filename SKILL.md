@@ -1,6 +1,7 @@
 ---
 name: adobe-plugin-development
 description: Use when building, modifying, or debugging Adobe Photoshop UXP plugins or Lightroom Classic plugins — panel UI, pixel access, develop-module observation, memory management in long-lived LrC processes, hybrid native bridges, UXP HTML/CSS/Canvas limits, and Spectrum widgets
+version: 1.0.0
 ---
 
 # Adobe Plugin Development
