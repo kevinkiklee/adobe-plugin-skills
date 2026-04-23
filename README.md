@@ -6,7 +6,7 @@ An [agent skill](https://agentskills.io) for building Adobe Photoshop UXP plugin
 
 ### Photoshop UXP (`ps-uxp-sdk.md`)
 
-- Document class (30 properties, 29 methods) and Layer class (28 properties, 55 methods — 38 filters + 17 other)
+- Document class (33 properties, 29 methods) and Layer class (28 properties, 55 methods — 38 filters + 17 other)
 - Selection class, LayerComp, ColorSampler, PathItem, Guide, HistoryState
 - Manifest v5 configuration, permissions, and feature flags (`CSSNextSupport`, `enableSWCSupport`)
 - Imaging API: `getPixels`, `putPixels`, `createImageDataFromBuffer`, `encodeImageData`, masks, selection
@@ -68,6 +68,36 @@ The skill activates automatically when you work on Photoshop UXP or Lightroom Cl
 ### Other Agents
 
 Copy or symlink the skill directory into your agent's skill discovery path. The skill follows the [agentskills.io specification](https://agentskills.io/specification) with standard YAML frontmatter in `SKILL.md`.
+
+## Updating
+
+New releases ship API corrections and coverage for newer SDK versions. Pick the path that matches how you installed:
+
+### Claude Skill CLI
+
+```bash
+skill update kevinkiklee/adobe-plugin-skills
+```
+
+### Manual install (cloned)
+
+```bash
+cd ~/.claude/skills/adobe-plugin-development
+git pull
+```
+
+### Manual install (symlinked)
+
+```bash
+cd /path/to/adobe-plugin-skills
+git pull
+```
+
+### Stay notified of new releases
+
+On the [GitHub repo](https://github.com/kevinkiklee/adobe-plugin-skills), click **Watch → Custom → Releases**. You'll get an email + GitHub notification each time a new version is tagged.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release. Current version is in `SKILL.md`'s `version:` frontmatter field.
 
 ## SDK Versions
 
